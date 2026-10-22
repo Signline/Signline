@@ -1,0 +1,9 @@
+.git
+backend/target
+tui-installer/target
+frontend/node_modules
+pb_data
+storage
+dist
+build_script/dist
+*.log

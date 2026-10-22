@@ -1,0 +1,16 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: signline/signline:0.1.0b
+    ports:
+      - 3000:3000
+    volumes:
+      - ../pb_data:/opt/signline/pb_data
+    environment:
+      - HOST=0.0.0.0
+      - PORT=3000
+      - APP_URL=http://localhost:3000
+      - POCKETBASE_URL=http://127.0.0.1:8090
+    restart: unless-stopped

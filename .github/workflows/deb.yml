@@ -1,0 +1,38 @@
+name: Build Debian (.deb) Package
+
+on:
+  push:
+    branches:
+      - 0.1.0
+  workflow_dispatch:
+
+jobs:
+  build-deb:
+    name: Compile & Package signline_0.1.0b_amd64.deb
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev curl unzip dpkg-dev poppler-utils
+
+      - name: Compile and build .deb package
+        run: ./build_script/build_deb.sh
+
+      - name: Upload .deb package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signline-deb-package
+          path: build_script/dist/*.deb

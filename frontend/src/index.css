@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Signline Brand Theme Defaults
+       Primary: #2161AD -> HSL 213 68% 40%
+       Accent: #253E8A -> HSL 225 58% 34%
+       Background: #F5F8FC -> HSL 214 54% 97%
+       Secondary: #E8EFF8 -> HSL 214 57% 94%
+       Muted: #D6E2F2 -> HSL 214 48% 89%
+       Foreground: #333333 -> HSL 0 0% 20%
+    */
+    --background: 214 54% 97%;
+    --foreground: 0 0% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 20%;
+
+    --primary: 213 68% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 214 57% 94%;
+    --secondary-foreground: 213 68% 28%;
+
+    --muted: 214 48% 89%;
+    --muted-foreground: 215 20% 42%;
+
+    --accent: 225 58% 34%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 38% 84%;
+    --input: 214 38% 84%;
+    --ring: 213 68% 40%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom scrollbar for builder & document viewer */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--secondary));
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.35);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.55);
+}

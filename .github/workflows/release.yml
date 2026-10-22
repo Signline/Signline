@@ -1,0 +1,118 @@
+name: Release
+
+# Builds the Debian package for a version tag and publishes it as a GitHub Release.
+# Versions with a pre-release suffix (a = alpha, b = beta, rc, or "-...") such as
+# v0.1.0b are published as pre-releases.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build and release (e.g. v0.1.0b)"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build & publish GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.TAG }}
+
+      - name: Check tag matches VERSION
+        run: |
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          if [ "${TAG#v}" != "${VERSION}" ]; then
+            echo "::error::Tag ${TAG} does not match VERSION file (${VERSION})"
+            exit 1
+          fi
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo registry and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            backend/target
+            build_script/tui-installer/target
+          key: ${{ runner.os }}-release-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev curl unzip dpkg-dev poppler-utils
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Compile and build .deb package
+        run: ./build_script/build_deb.sh
+
+      - name: Prepare release assets and notes
+        run: |
+          shopt -s nullglob
+          debs=(build_script/dist/*.deb)
+          if [ "${#debs[@]}" -eq 0 ]; then
+            echo "::error::No .deb package was built"
+            exit 1
+          fi
+          (cd build_script/dist && sha256sum ./*.deb > SHA256SUMS)
+
+          # Release notes: this version's section of CHANGELOG.md
+          awk -v ver="## ${VERSION} " 'index($0, ver) == 1 {f = 1; next} /^## / && f {exit} f' \
+            CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "Signline ${VERSION}" > release-notes.md
+          fi
+
+          # a = alpha, b = beta, rc = release candidate, or a "-" pre-release suffix
+          if [[ "${VERSION}" =~ [0-9](a|b|rc|alpha|beta)[0-9]*$ || "${VERSION}" == *-* ]]; then
+            echo "PRERELEASE=true" >> "$GITHUB_ENV"
+          else
+            echo "PRERELEASE=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE="Signline ${VERSION}"
+          if [ "${PRERELEASE}" = "true" ]; then
+            TITLE="${TITLE} (Pre-Release)"
+          fi
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release edit "${TAG}" --title "${TITLE}" --notes-file release-notes.md \
+              --prerelease="${PRERELEASE}"
+            gh release upload "${TAG}" build_script/dist/*.deb build_script/dist/SHA256SUMS --clobber
+          else
+            gh release create "${TAG}" build_script/dist/*.deb build_script/dist/SHA256SUMS \
+              --verify-tag --title "${TITLE}" --notes-file release-notes.md \
+              --prerelease="${PRERELEASE}"
+          fi

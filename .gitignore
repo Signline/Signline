@@ -1,0 +1,27 @@
+# Rust compilation artifacts
+/backend/target/
+/build_script/tui-installer/target/
+/tui-installer/target/
+**/target/
+
+# Node.js dependencies
+/frontend/node_modules/
+**/node_modules/
+
+# Runtime database & local blob storage
+/pb_data/
+/storage/
+
+# Packaged .deb archives & downloaded PocketBase binary (downloaded automatically by build_script/build_deb.sh)
+/dist/
+/build_script/dist/
+/bin/pocketbase
+!/bin/.gitkeep
+
+# Environment & OS files
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+/tmp/
